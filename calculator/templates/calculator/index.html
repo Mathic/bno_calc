@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+{# Load the tag library #}
+{% load bootstrap4 %}
+
+{% load static %}
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    {# Load CSS and JavaScript #}
+    {% bootstrap_css %}
+    {% bootstrap_javascript %}
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+            integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+            crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js"
+            integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49"
+            crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css"
+          integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js"
+            integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy"
+            crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+    <!--<script type="text/javascript" src="{% static 'bno.js' %}"></script>-->
+
+    <title>Calculator</title>
+</head>
+<body>
+<h1>Baltimore and Ohio Net Income Calculator</h1>
+<br/>
+<div class="container">
+    <div class="row">
+        <div class="col-4">
+            <div class="row">
+                <h3>Tech Level: <label id="current_tech_level"></label></h3>
+            </div>
+            <div class="row">
+                <div class="btn-toolbar" role="toolbar" aria-label="Tech level button groups">
+                    <div class="btn-group btn-group-toggle mr-2 tech_level" data-toggle="buttons">
+                        <label class="btn btn-secondary active">
+                            <input type="radio" name="options" value="1" autocomplete="off" checked> 1 </label>
+                        <label class="btn btn-secondary">
+                            <input type="radio" name="options" value="2" autocomplete="off"> 2 </label>
+                        <label class="btn btn-secondary">
+                            <input type="radio" name="options" value="3" autocomplete="off"> 3 </label>
+                        <label class="btn btn-secondary">
+                            <input type="radio" name="options" value="4" autocomplete="off"> 4 </label>
+                        <label class="btn btn-secondary">
+                            <input type="radio" name="options" value="5" autocomplete="off"> 5 </label>
+                        <label class="btn btn-secondary">
+                            <input type="radio" name="options" value="6" autocomplete="off"> 6 </label>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <h3>Number of Trains: <label id="num_trains">0</label></h3>
+            </div>
+            <div class="row">
+                <button class="btn btn-secondary" id="train-count">Add</button>
+            </div>
+            <div class="row">
+                <h3>Train Tech Levels</h3>
+            </div>
+            <div class="row" id="t-tech"></div>
+
+
+        </div>
+        <div class="col">
+            <h3>Cities: <label id="num_stops">0</label></h3>
+            {% for city in city_list %}
+            <div class="checkbox">
+                <label><input type="checkbox" class="city-name" value="{{ city.city_name }}">{{ city.city_name }}</label>
+                <span class="invisible">
+                    <span class="tech_1 {{ city.city_name }}">{{ city.tech_1 }}</span>
+                    <span class="tech_2 {{ city.city_name }}">{{ city.tech_2 }}</span>
+                    <span class="tech_3 {{ city.city_name }}">{{ city.tech_3 }}</span>
+                    <span class="tech_4 {{ city.city_name }}">{{ city.tech_4 }}</span>
+                    <span class="tech_5 {{ city.city_name }}">{{ city.tech_5 }}</span>
+                    <span class="tech_6 {{ city.city_name }}">{{ city.tech_6 }}</span>
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="col">
+            <h3>Costs:</h3>
+            <label id="cities">0</label>
+        </div>
+    </div>
+
+</div>
+    <script type="text/javascript">
+        // get selection
+        var gross = [];
+        var num_trains = 0;
+        var level = $('.tech_level').find('.active').text();
+
+        $('#current_tech_level').text(level);
+        $('#num_trains').text(num_trains);
+
+        SetLevel(level);
+        CountStops();
+
+        $('.tech_level').delegate('label', 'change', function() {
+            $(this).addClass('active').siblings().removeClass('active');
+            level = $('.tech_level').find('.active').text();
+            $('#current_tech_level').text(level);
+            SetLevel(level);
+        });
+
+        $('#train-count').on('click', function() {
+            if (num_trains > 5) {
+                return false;
+            };
+            num_trains = num_trains + 1;
+            var HTML = '{% include 'calculator/traintech.html' %}';
+            $('#t-tech').append(HTML);
+
+            $('.train-tech').delegate('label', 'click', function() {
+                $(this).addClass('active').siblings().removeClass('active');
+                CountStops();
+            });
+
+            $('#num_trains').text(num_trains);
+            SetLevel(level);
+            CountStops();
+        });
+
+        $(document).on('click', '.remove-train', function() {
+            $(this).parent().remove();
+            num_trains = num_trains - 1;
+            $('#num_trains').text(num_trains);
+            CountStops();
+        });
+
+        $('.city-name').on('change', function() {
+            var tech_level = 'tech_' + $('#current_tech_level').text().trim();
+            var name = '.' + tech_level + '.' + ($(this)[0].value).replace(' ', '.');
+            var num = parseInt($(name).text());
+            if (this.checked) {
+                gross.push(num);
+            } else {
+                gross.splice($.inArray(num, gross), 1);
+            }
+            $('#cities').text(gross.toString());
+        });
+
+
+        function CountStops() {
+            var total = 0;
+            var add = $('.train-tech').find('.active').text().split('');
+            $.each(add, function(index, value) {
+                if (!jQuery.isNumeric(parseInt(value))) {
+                    return true;
+                }
+                total = total + parseInt(value);
+            });
+            $('#num_stops').text(total);
+        }
+
+        function SetLevel(lvl) {
+            $('.train-tech').each(function(index) {
+                $(this).find('label').each(function() {
+                    if (parseInt($(this).text()) > parseInt(lvl)) {
+                        $(this).addClass('invisible');
+                    } else if ($(this).hasClass('invisible')) {
+                        $(this).removeClass('invisible');
+                    }
+                });
+            });
+        }
+
+    </script>
+</body>
+</html>
