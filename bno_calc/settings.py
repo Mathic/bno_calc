@@ -41,7 +41,6 @@ INSTALLED_APPS = [
     'whitenoise.runserver_nostatic',
     'django.contrib.staticfiles',
     'calculator.apps.CalculatorConfig',
-    'bootstrap4',
 ]
 
 MIDDLEWARE = [
