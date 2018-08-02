@@ -13,20 +13,31 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css"
           integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js"
-            integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy"
+            integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh4IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy"
             crossorigin="anonymous"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 
     <title>Calculator</title>
 </head>
 <body>
-<h1>Baltimore and Ohio Net Income Calculator</h1>
 <br/>
 <div class="container">
+    <div class="jumbotron">
+        <h1 class="display-4">Baltimore and Ohio Net Income Calculator</h1>
+        <p class="lead">This is a simple application to calculate income in the Baltimore and Ohio board game.</p>
+        <hr class="my-4">
+        <p>
+            Add trains using the 'Add' buttons, and remove trains by clicking the X next to them. Increase or decrease
+            overall tech level by clicking the numbers for tech level. This will hide or show individual train tech
+            levels. Selecting different train tech levels will automatically calculate how many stops are available.
+            Select cities that have railroads in them to automatically calculate possible gross incomes. Subtract
+            maintenance cost from desired gross income to get net income.
+        </p>
+    </div>
     <div class="row">
         <div class="col-4">
             <div class="row">
-                <h3>Tech Level: <label id="current_tech_level"></label></h3>
+                <h4>Tech Level: <label id="current_tech_level"></label></h4>
             </div>
             <div class="row">
                 <div class="btn-toolbar" role="toolbar" aria-label="Tech level button groups">
@@ -47,198 +58,231 @@
                 </div>
             </div>
             <div class="row">
-                <h3>Number of Trains: <label id="num_trains">0</label></h3>
+                <h4>Number of Trains: <label id="num_trains">0</label></h4>
             </div>
             <div class="row">
                 <button class="btn btn-secondary" id="train-count">Add</button>
             </div>
-            <div class="row">
-                <h3>Train Tech Levels</h3>
-            </div>
+            <div class="row"><h4>Gross Incomes:</h4></div>
+            <div class="row"><label id="gross">0</label></div>
+            <div class="row"><h4>Maintenance:</h4></div>
+            <div class="row"><label id="maintenance">0</label></div>
+            <div class="row"><h4>Train Tech Levels</h4></div>
             <div class="row" id="t-tech"></div>
-
-
         </div>
         <div class="col">
-            <h3>Cities: <label id="num_stops">0</label></h3>
-            {% for city in city_list %}
-            <div class="checkbox">
-                <label><input type="checkbox" class="city-name" value="{{ city.city_name }}">{{ city.city_name }}</label>
-                <span class="">
-                    <span class="tech_1 {{ city.city_name }}">{{ city.tech_1 }}</span>
-                    <span class="tech_2 {{ city.city_name }}">{{ city.tech_2 }}</span>
-                    <span class="tech_3 {{ city.city_name }}">{{ city.tech_3 }}</span>
-                    <span class="tech_4 {{ city.city_name }}">{{ city.tech_4 }}</span>
-                    <span class="tech_5 {{ city.city_name }}">{{ city.tech_5 }}</span>
-                    <span class="tech_6 {{ city.city_name }}">{{ city.tech_6 }}</span>
-                </span>
-            </div>
-            {% endfor %}
-        </div>
-        <div class="col">
-            <h3>Net Incomes:</h3>
-            <label id="net">0</label>
+            <h4>Cities: <label id="num_stops">0</label> stops <label id="cities_selected">0</label> selected</h4>
 
-            <h3>Maintenance:</h3>
-            <label id="maintenance">0</label>
+            <table class="table checkbox">
+                <thead>
+                    <tr>
+                        <th scope="col">Name/Tech Level</th>
+                        <th scope="col">1</th>
+                        <th scope="col">2</th>
+                        <th scope="col">3</th>
+                        <th scope="col">4</th>
+                        <th scope="col">5</th>
+                        <th scope="col">6</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for city in city_list %}
+                    <tr>
+                        <th scope="row">
+                            <label>
+                                <input type="checkbox" class="city-name" value="{{ city.city_name }}">{{ city.city_name }}
+                            </label>
+                        </th>
+                        <td class="tech_1 {{ city.city_name }}">{{ city.tech_1 }}</td>
+                        <td class="tech_2 {{ city.city_name }}">{{ city.tech_2 }}</td>
+                        <td class="tech_3 {{ city.city_name }}">{{ city.tech_3 }}</td>
+                        <td class="tech_4 {{ city.city_name }}">{{ city.tech_4 }}</td>
+                        <td class="tech_5 {{ city.city_name }}">{{ city.tech_5 }}</td>
+                        <td class="tech_6 {{ city.city_name }}">{{ city.tech_6 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 
 </div>
-    <script type="text/javascript">
-        // Variables
-        var gross = [];
-        var num_trains = 0;
-        var level = $('.tech_level').find('.active').text();
+<script type="text/javascript">
+    // Variables
+    var gross = [];
+    var num_trains = 0;
+    var num_selected = 0;
+    var level = $('.tech_level').find('.active').text();
 
-        // Initialize texts
+    // Initialize texts
+    $('#current_tech_level').text(level);
+    $('#num_trains').text(num_trains);
+
+    SetLevel(level);
+    CountStops();
+
+    // Calculations based on tech level
+    $('.tech_level').delegate('label', 'change', function() {
+        $(this).addClass('active').siblings().removeClass('active');
+        level = $('.tech_level').find('.active').text();
         $('#current_tech_level').text(level);
-        $('#num_trains').text(num_trains);
+
+        var maintenance = num_trains * parseInt(level) * 10;
+        $('#maintenance').text(maintenance.toString());
 
         SetLevel(level);
-        CountStops();
+        ResetGross();
+        GetGrossIncome(gross, parseInt($('#num_stops').text()));
+    });
 
-        // Calculations based on tech level
-        $('.tech_level').delegate('label', 'change', function() {
+    // Add trains, set maintenance cost
+    $('#train-count').on('click', function() {
+        if (num_trains > 5) {
+            return false;
+        };
+        num_trains = num_trains + 1;
+        var HTML = '{% include 'calculator/traintech.html' %}';
+        $('#t-tech').append(HTML);
+
+        $('.train-tech').delegate('label', 'click', function() {
             $(this).addClass('active').siblings().removeClass('active');
-            level = $('.tech_level').find('.active').text();
-            $('#current_tech_level').text(level);
-
-            var maintenance = num_trains * parseInt(level) * 10;
-            $('#maintenance').text(maintenance.toString());
-
-            SetLevel(level);
-        });
-
-        // Add trains, set maintenance cost
-        $('#train-count').on('click', function() {
-            if (num_trains > 5) {
-                return false;
-            };
-            num_trains = num_trains + 1;
-            var HTML = '{% include 'calculator/traintech.html' %}';
-            $('#t-tech').append(HTML);
-
-            $('.train-tech').delegate('label', 'click', function() {
-                $(this).addClass('active').siblings().removeClass('active');
-                CountStops();
-            });
-
-            var maintenance = num_trains * parseInt(level) * 10;
-
-            $('#num_trains').text(num_trains);
-            $('#maintenance').text(maintenance.toString());
-            SetLevel(level);
             CountStops();
-            GetNetIncome(gross, parseInt($('#num_stops').text()));
+            GetGrossIncome(gross, parseInt($('#num_stops').text()));
         });
 
-        // Remove trains set maintenance cost
-        $(document).on('click', '.remove-train', function() {
-            $(this).parent().remove();
-            num_trains = num_trains - 1;
-            var maintenance = num_trains * parseInt(level) * 10;
+        var maintenance = num_trains * parseInt(level) * 10;
 
-            $('#num_trains').text(num_trains);
-            $('#maintenance').text(maintenance.toString());
-            CountStops();
-            GetNetIncome(gross, parseInt($('#num_stops').text()));
+        $('#num_trains').text(num_trains);
+        $('#maintenance').text(maintenance.toString());
+        SetLevel(level);
+        CountStops();
+        GetGrossIncome(gross, parseInt($('#num_stops').text()));
+    });
+
+    // Remove trains set maintenance cost
+    $(document).on('click', '.remove-train', function() {
+        $(this).parent().remove();
+        num_trains = num_trains - 1;
+        var maintenance = num_trains * parseInt(level) * 10;
+
+        $('#num_trains').text(num_trains);
+        $('#maintenance').text(maintenance.toString());
+        CountStops();
+        GetGrossIncome(gross, parseInt($('#num_stops').text()));
+    });
+
+    // Add income cost of each city to array
+    $('.city-name').on('change', function() {
+        var tech_level = 'tech_' + $('#current_tech_level').text().trim();
+        var name = '.' + tech_level + '.' + ($(this)[0].value).replace(' ', '.');
+        var num = parseInt($(name).text());
+        if (this.checked) {
+            gross.push(num);
+            $(this).addClass('checked');
+            num_selected++;
+        } else {
+            gross.splice($.inArray(num, gross), 1);
+            $(this).removeClass('checked');
+            num_selected--;
+        }
+        $('#cities_selected').text(num_selected.toString());
+        GetGrossIncome(gross, parseInt($('#num_stops').text()));
+    });
+
+    // Reset gross incomes
+    function ResetGross(){
+        gross = [];
+        var tech_level, name, num;
+        $('.city-name.checked').each(function() {
+            tech_level = 'tech_' + $('#current_tech_level').text().trim();
+            name = '.' + tech_level + '.' + ($(this).attr('value')).replace(' ', '.');
+            num = parseInt($(name).text());
+            gross.push(num);
         });
+    };
 
-        // Add income cost of each city to array
-        $('.city-name').on('change', function() {
-            var tech_level = 'tech_' + $('#current_tech_level').text().trim();
-            var name = '.' + tech_level + '.' + ($(this)[0].value).replace(' ', '.');
-            var num = parseInt($(name).text());
-            if (this.checked) {
-                gross.push(num);
-            } else {
-                gross.splice($.inArray(num, gross), 1);
+    // Number of stops based on cities checked
+    function CountStops() {
+        var total = 0;
+        var add = $('.train-tech').find('.active').text().split('');
+        $.each(add, function(index, value) {
+            if (!jQuery.isNumeric(parseInt(value))) {
+                return true;
             }
-            GetNetIncome(gross, parseInt($('#num_stops').text()));
+            total = total + parseInt(value);
         });
+        $('#num_stops').text(total);
+    };
 
-        // Number of stops based on cities checked
-        function CountStops() {
-            var total = 0;
-            var add = $('.train-tech').find('.active').text().split('');
-            $.each(add, function(index, value) {
-                if (!jQuery.isNumeric(parseInt(value))) {
-                    return true;
+    // Add or remove train tech levels based on overall tech level
+    function SetLevel(lvl) {
+        $('.train-tech').each(function(index) {
+            $(this).find('label').each(function() {
+                if (parseInt($(this).text()) > parseInt(lvl)) {
+                    $(this).addClass('invisible');
+                } else if ($(this).hasClass('invisible')) {
+                    $(this).removeClass('invisible');
                 }
-                total = total + parseInt(value);
             });
-            $('#num_stops').text(total);
-        };
+        });
+    };
 
-        // Add or remove train tech levels based on overall tech level
-        function SetLevel(lvl) {
-            $('.train-tech').each(function(index) {
-                $(this).find('label').each(function() {
-                    if (parseInt($(this).text()) > parseInt(lvl)) {
-                        $(this).addClass('invisible');
-                    } else if ($(this).hasClass('invisible')) {
-                        $(this).removeClass('invisible');
-                    }
-                });
-            });
-        };
+    // Get all city income combinations based on train tech level (https://gist.github.com/axelpale/3118596)
+    function GetGrossIncome(set, k){
+        var i, j, combs, head, tailcombs;
 
-        // Get all city income combinations based on train tech level (https://gist.github.com/axelpale/3118596)
-        function GetNetIncome(set, k){
-            var i, j, combs, head, tailcombs;
+        if (k <= 0 || set.length <= 0) {
+            $('#gross').text('0');
+            return [];
+        }
 
-            if (k <= 0) {
-                return [];
-            }
-
-            // There is N 1-sized subsets in a N-sized set.
-            if (k == 1) {
-                combs = set;
-                $('#net').text(combs.toString());
-                return combs;
-            }
-
-            // K-sized set has only one K-sized subset.
-            if (k > set.length || k == set.length) {
-                if (set.length > 0){
-                    const reducer = (accumulator, currentValue) => accumulator + currentValue;
-                    $('#net').text(set.reduce(reducer));
-                }
-                return [set];
-            }
-
-            combs = [];
-            for (i = 0; i < set.length - k + 1; i++) {
-                // head is a list that includes only our current element.
-                head = set.slice(i, i + 1);
-                // We take smaller combinations from the subsequent elements
-                tailcombs = GetNetIncome(set.slice(i + 1), k - 1);
-                // For each (k-1)-combination we join it with the current
-                // and store it to the set of k-combinations.
-                for (j = 0; j < tailcombs.length; j++) {
-                    combs.push(head.concat(tailcombs[j]));
-                }
-            }
-            ArraySum(combs);
+        // There is N 1-sized subsets in a N-sized set.
+        if (k == 1) {
+            combs = set;
+            $('#gross').text(combs.toString());
             return combs;
-        };
+        }
 
-        // Get all income combination sums
-        function ArraySum(arr){
-            var sums = [];
-            $(arr).each(function(i){
-                var comb = arr[i];
-                var sum = 0;
-                $(comb).each(function(j){
-                    sum += comb[j];
-                })
-                if($.inArray(sum, sums) === -1)
-                    sums.push(sum);
+        // K-sized set has only one K-sized subset.
+        if (k > set.length || k == set.length) {
+            if (set.length > 0){
+                const reducer = (accumulator, currentValue) => accumulator + currentValue;
+                $('#gross').text(set.reduce(reducer));
+            }
+            return [set];
+        }
+
+        combs = [];
+        for (i = 0; i < set.length - k + 1; i++) {
+            // head is a list that includes only our current element.
+            head = set.slice(i, i + 1);
+            // We take smaller combinations from the subsequent elements
+            tailcombs = GetGrossIncome(set.slice(i + 1), k - 1);
+            // For each (k-1)-combination we join it with the current
+            // and store it to the set of k-combinations.
+            for (j = 0; j < tailcombs.length; j++) {
+                combs.push(head.concat(tailcombs[j]));
+            }
+        }
+        ArraySum(combs);
+        return combs;
+    };
+
+    // Get all income combination sums
+    function ArraySum(arr){
+        var sums = [];
+        $(arr).each(function(i){
+            var comb = arr[i];
+            var sum = 0;
+            $(comb).each(function(j){
+                sum += comb[j];
             })
-            $('#net').text(sums.sort().toString());
-        };
+            if($.inArray(sum, sums) === -1)
+                sums.push(sum);
+        })
+        $('#gross').text(sums.sort().toString());
+    };
 
-    </script>
+</script>
 </body>
 </html>
