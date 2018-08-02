@@ -16,7 +16,7 @@
             integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy"
             crossorigin="anonymous"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-    
+
     <title>Calculator</title>
 </head>
 <body>
@@ -64,7 +64,7 @@
             {% for city in city_list %}
             <div class="checkbox">
                 <label><input type="checkbox" class="city-name" value="{{ city.city_name }}">{{ city.city_name }}</label>
-                <span class="invisible">
+                <span class="">
                     <span class="tech_1 {{ city.city_name }}">{{ city.tech_1 }}</span>
                     <span class="tech_2 {{ city.city_name }}">{{ city.tech_2 }}</span>
                     <span class="tech_3 {{ city.city_name }}">{{ city.tech_3 }}</span>
@@ -76,31 +76,41 @@
             {% endfor %}
         </div>
         <div class="col">
-            <h3>Costs:</h3>
-            <label id="cities">0</label>
+            <h3>Net Incomes:</h3>
+            <label id="net">0</label>
+
+            <h3>Maintenance:</h3>
+            <label id="maintenance">0</label>
         </div>
     </div>
 
 </div>
     <script type="text/javascript">
-        // get selection
+        // Variables
         var gross = [];
         var num_trains = 0;
         var level = $('.tech_level').find('.active').text();
 
+        // Initialize texts
         $('#current_tech_level').text(level);
         $('#num_trains').text(num_trains);
 
         SetLevel(level);
         CountStops();
 
+        // Calculations based on tech level
         $('.tech_level').delegate('label', 'change', function() {
             $(this).addClass('active').siblings().removeClass('active');
             level = $('.tech_level').find('.active').text();
             $('#current_tech_level').text(level);
+
+            var maintenance = num_trains * parseInt(level) * 10;
+            $('#maintenance').text(maintenance.toString());
+
             SetLevel(level);
         });
 
+        // Add trains, set maintenance cost
         $('#train-count').on('click', function() {
             if (num_trains > 5) {
                 return false;
@@ -114,18 +124,28 @@
                 CountStops();
             });
 
+            var maintenance = num_trains * parseInt(level) * 10;
+
             $('#num_trains').text(num_trains);
+            $('#maintenance').text(maintenance.toString());
             SetLevel(level);
             CountStops();
+            GetNetIncome(gross, parseInt($('#num_stops').text()));
         });
 
+        // Remove trains set maintenance cost
         $(document).on('click', '.remove-train', function() {
             $(this).parent().remove();
             num_trains = num_trains - 1;
+            var maintenance = num_trains * parseInt(level) * 10;
+
             $('#num_trains').text(num_trains);
+            $('#maintenance').text(maintenance.toString());
             CountStops();
+            GetNetIncome(gross, parseInt($('#num_stops').text()));
         });
 
+        // Add income cost of each city to array
         $('.city-name').on('change', function() {
             var tech_level = 'tech_' + $('#current_tech_level').text().trim();
             var name = '.' + tech_level + '.' + ($(this)[0].value).replace(' ', '.');
@@ -135,10 +155,10 @@
             } else {
                 gross.splice($.inArray(num, gross), 1);
             }
-            $('#cities').text(gross.toString());
+            GetNetIncome(gross, parseInt($('#num_stops').text()));
         });
 
-
+        // Number of stops based on cities checked
         function CountStops() {
             var total = 0;
             var add = $('.train-tech').find('.active').text().split('');
@@ -149,8 +169,9 @@
                 total = total + parseInt(value);
             });
             $('#num_stops').text(total);
-        }
+        };
 
+        // Add or remove train tech levels based on overall tech level
         function SetLevel(lvl) {
             $('.train-tech').each(function(index) {
                 $(this).find('label').each(function() {
@@ -161,7 +182,62 @@
                     }
                 });
             });
-        }
+        };
+
+        // Get all city income combinations based on train tech level (https://gist.github.com/axelpale/3118596)
+        function GetNetIncome(set, k){
+            var i, j, combs, head, tailcombs;
+
+            if (k <= 0) {
+                return [];
+            }
+
+            // There is N 1-sized subsets in a N-sized set.
+            if (k == 1) {
+                combs = set;
+                $('#net').text(combs.toString());
+                return combs;
+            }
+
+            // K-sized set has only one K-sized subset.
+            if (k > set.length || k == set.length) {
+                if (set.length > 0){
+                    const reducer = (accumulator, currentValue) => accumulator + currentValue;
+                    $('#net').text(set.reduce(reducer));
+                }
+                return [set];
+            }
+
+            combs = [];
+            for (i = 0; i < set.length - k + 1; i++) {
+                // head is a list that includes only our current element.
+                head = set.slice(i, i + 1);
+                // We take smaller combinations from the subsequent elements
+                tailcombs = GetNetIncome(set.slice(i + 1), k - 1);
+                // For each (k-1)-combination we join it with the current
+                // and store it to the set of k-combinations.
+                for (j = 0; j < tailcombs.length; j++) {
+                    combs.push(head.concat(tailcombs[j]));
+                }
+            }
+            ArraySum(combs);
+            return combs;
+        };
+
+        // Get all income combination sums
+        function ArraySum(arr){
+            var sums = [];
+            $(arr).each(function(i){
+                var comb = arr[i];
+                var sum = 0;
+                $(comb).each(function(j){
+                    sum += comb[j];
+                })
+                if($.inArray(sum, sums) === -1)
+                    sums.push(sum);
+            })
+            $('#net').text(sums.sort().toString());
+        };
 
     </script>
 </body>
