@@ -1,3 +1,5 @@
+*.png
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -107,3 +109,4 @@ venv.bak/
 .idea/
 .idea/misc.xml
 .idea/workspace.xml
+staticfiles/

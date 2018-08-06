@@ -72,16 +72,28 @@
             <div class="row">
                 <button class="btn btn-secondary" id="train-count">Add</button>
             </div>
-            <div class="row"><h4>Gross Incomes:</h4></div>
-            <div class="row"><label id="gross">0</label></div>
             <div class="row"><h4>Maintenance:</h4></div>
             <div class="row"><label id="maintenance">0</label></div>
+
+            <div class="row"><h4>Net Incomes:</h4></div>
+            <div class="row"><label id="net">0</label></div>
+
+            <div class="row"><h4>Coal:</h4></div>
+            <div class="row">
+              <div class="btn-group btn-group-toggle mr-2 coal" data-toggle="buttons">
+                  <label class="btn btn-secondary active" value="1"><input type="radio" name="options" autocomplete="off" checked>0</label>
+                  <label class="btn btn-secondary" value="2"><input type="radio" name="options" autocomplete="off"> 1</label>
+                  <label class="btn btn-secondary" value="2"><input type="radio" name="options" autocomplete="off"> 2</label>
+                  <label class="btn btn-secondary" value="3"><input type="radio" name="options" autocomplete="off"> 3</label>
+                  <label class="btn btn-secondary" value="4"><input type="radio" name="options" autocomplete="off"> 4</label>
+                  <label class="btn btn-secondary" value="5"><input type="radio" name="options" autocomplete="off"> 5</label>
+              </div>
+            </div>
             <div class="row"><h4>Train Tech Levels</h4></div>
             <div class="row" id="t-tech"></div>
         </div>
         <div class="col">
             <h4>Cities: <label id="num_stops">0</label> stops <label id="cities_selected">0</label> selected</h4>
-
             <table class="table checkbox">
                 <thead>
                     <tr>
@@ -114,11 +126,11 @@
             </table>
         </div>
     </div>
-
 </div>
 <script type="text/javascript">
     // Variables
     var gross = [];
+    var sums = [];
     var num_trains = 0;
     var num_selected = 0;
     var level = $('.tech_level').find('.active').text();
@@ -141,7 +153,14 @@
 
         SetLevel(level);
         ResetGross();
-        GetGrossIncome(gross, parseInt($('#num_stops').text()));
+        GetNetIncome(gross, parseInt($('#num_stops').text()));
+    });
+
+    // Event handler for amount of coal
+    $('.coal').delegate('label', 'change', function(){
+      $(this).addClass('active').siblings().removeClass('active');
+
+      GetNetIncome(gross, parseInt($('#num_stops').text()));
     });
 
     // Add trains, set maintenance cost
@@ -156,7 +175,7 @@
         $('.train-tech').delegate('label', 'click', function() {
             $(this).addClass('active').siblings().removeClass('active');
             CountStops();
-            GetGrossIncome(gross, parseInt($('#num_stops').text()));
+            GetNetIncome(gross, parseInt($('#num_stops').text()));
         });
 
         var maintenance = num_trains * parseInt(level) * 10;
@@ -165,7 +184,7 @@
         $('#maintenance').text(maintenance.toString());
         SetLevel(level);
         CountStops();
-        GetGrossIncome(gross, parseInt($('#num_stops').text()));
+        GetNetIncome(gross, parseInt($('#num_stops').text()));
     });
 
     // Remove trains set maintenance cost
@@ -177,7 +196,7 @@
         $('#num_trains').text(num_trains);
         $('#maintenance').text(maintenance.toString());
         CountStops();
-        GetGrossIncome(gross, parseInt($('#num_stops').text()));
+        GetNetIncome(gross, parseInt($('#num_stops').text()));
     });
 
     // Add income cost of each city to array
@@ -195,7 +214,7 @@
             num_selected--;
         }
         $('#cities_selected').text(num_selected.toString());
-        GetGrossIncome(gross, parseInt($('#num_stops').text()));
+        GetNetIncome(gross, parseInt($('#num_stops').text()));
     });
 
     // Reset gross incomes
@@ -236,27 +255,52 @@
         });
     };
 
+    // Calculations for adding coal
+    function AddCoal(){
+      var with_coal = [];
+      var coals = parseInt($('.coal').find('.active').text());
+      $.each(sums, function(index, value){
+        with_coal.push(sums[index] + coals*40);
+      })
+      var sorted = with_coal.sort(function(a,b){
+        return a - b;
+      });
+      $('#net').text(sorted.toString());
+    };
+
     // Get all city income combinations based on train tech level (https://gist.github.com/axelpale/3118596)
-    function GetGrossIncome(set, k){
+    function GetNetIncome(set, k){
         var i, j, combs, head, tailcombs;
 
         if (k <= 0 || set.length <= 0) {
-            $('#gross').text('0');
+            $('#net').text('0');
             return [];
         }
 
-        // There is N 1-sized subsets in a N-sized set.
-        if (k == 1) {
+        if (parseInt($('#num_stops').text()) === 1 && k === 1) {
+          var net = [];
+          var sum = 0;
+          $.each(gross, function(i){
+            sum = gross[i] - parseInt($('#maintenance').text());
+            if($.inArray(sum, net) === -1)
+                net.push(sum);
+          })
+          sums = net;
+          AddCoal();
+          return combs;
+        } else if (parseInt($('#num_stops').text()) > 1 && k === 1) { // There is N 1-sized subsets in a N-sized set.
             combs = set;
-            $('#gross').text(combs.toString());
+            $('#net').text(combs.sort(function(a,b){return a - b;}).toString());
             return combs;
         }
 
         // K-sized set has only one K-sized subset.
-        if (k > set.length || k == set.length) {
+        if (k > set.length) {
             if (set.length > 0){
                 const reducer = (accumulator, currentValue) => accumulator + currentValue;
-                $('#gross').text(set.reduce(reducer));
+                var income = set.reduce(reducer);
+                income = income + parseInt($('.coal').text())*40 - parseInt($('#maintenance').text());
+                $('#net').text(income);
             }
             return [set];
         }
@@ -266,7 +310,7 @@
             // head is a list that includes only our current element.
             head = set.slice(i, i + 1);
             // We take smaller combinations from the subsequent elements
-            tailcombs = GetGrossIncome(set.slice(i + 1), k - 1);
+            tailcombs = GetNetIncome(set.slice(i + 1), k - 1);
             // For each (k-1)-combination we join it with the current
             // and store it to the set of k-combinations.
             for (j = 0; j < tailcombs.length; j++) {
@@ -279,19 +323,20 @@
 
     // Get all income combination sums
     function ArraySum(arr){
-        var sums = [];
+      sums = [];
         $(arr).each(function(i){
             var comb = arr[i];
             var sum = 0;
+            var maintenance = $('#maintenance').text();
             $(comb).each(function(j){
                 sum += comb[j];
             })
+            sum -= maintenance;
             if($.inArray(sum, sums) === -1)
                 sums.push(sum);
         })
-        $('#gross').text(sums.sort().toString());
+        AddCoal();
     };
-
 </script>
 </body>
 </html>
