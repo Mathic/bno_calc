@@ -31,7 +31,7 @@ $('#train-count').on('click', function() {
         return false;
     };
     num_trains = num_trains + 1;
-    var HTML = '{% include 'calculator/traintech.html' %}';
+    var HTML = html;
     $('#t-tech').append(HTML);
 
     $('.train-tech').delegate('label', 'click', function() {
